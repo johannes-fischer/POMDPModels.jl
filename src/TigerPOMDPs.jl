@@ -7,6 +7,8 @@ mutable struct TigerPOMDP <: POMDP{Bool, Int64, Bool}
 end
 TigerPOMDP() = TigerPOMDP(-1.0, -100.0, 10.0, 0.85, 0.95)
 
+updater(problem::TigerPOMDP) = DiscreteUpdater(problem)
+
 states(::TigerPOMDP) = (false, true)
 observations(::TigerPOMDP) = (false, true)
 
@@ -26,7 +28,8 @@ const TIGER_RIGHT = true
 
 # Resets the problem after opening door; does nothing after listening
 function transition(pomdp::TigerPOMDP, s::Bool, a::Int64)
-    if a == TIGER_OPEN_LEFT || a == TIGER_OPEN_RIGHT
+    p = 1.0
+    if a == 1 || a == 2
         p = 0.5
     elseif s
         p = 1.0
@@ -39,7 +42,7 @@ end
 function observation(pomdp::TigerPOMDP, a::Int64, sp::Bool)
     pc = pomdp.p_listen_correctly
     p = 1.0
-    if a == TIGER_LISTEN
+    if a == 0
         sp ? (p = pc) : (p = 1.0-pc)
     else
         p = 0.5
@@ -54,12 +57,12 @@ end
 
 function reward(pomdp::TigerPOMDP, s::Bool, a::Int64)
     r = 0.0
-    a == TIGER_LISTEN && (r+=pomdp.r_listen)
-    if a == TIGER_OPEN_LEFT
-        s == TIGER_LEFT ? (r += pomdp.r_findtiger) : (r += pomdp.r_escapetiger)
+    a == 0 ? (r+=pomdp.r_listen) : (nothing)
+    if a == 1
+        s ? (r += pomdp.r_findtiger) : (r += pomdp.r_escapetiger)
     end
-    if a == TIGER_OPEN_RIGHT
-        s == TIGER_RIGHT ? (r += pomdp.r_findtiger) : (r += pomdp.r_escapetiger)
+    if a == 2
+        s ? (r += pomdp.r_escapetiger) : (r += pomdp.r_findtiger)
     end
     return r
 end
@@ -68,7 +71,7 @@ reward(pomdp::TigerPOMDP, s::Bool, a::Int64, sp::Bool) = reward(pomdp, s, a)
 
 initialstate(pomdp::TigerPOMDP) = BoolDistribution(0.5)
 
-actions(::TigerPOMDP) = 0:2
+actions(::TigerPOMDP) = [0,1,2]
 
 function upperbound(pomdp::TigerPOMDP, s::Bool)
     return pomdp.r_escapetiger
